@@ -1,0 +1,44 @@
+{
+	"name": "Appstrap",
+	"version": "0.0.1",
+	"description": "Sidebox is a community connecting people who need to ship something somewhere with people who already make that journey",
+	"author": "Colihop SPRL",
+	"license": "MIT",
+	"charset": "utf-8",
+
+	"meta": {
+
+	},
+
+	"dependencies": {
+		"ionicons": {
+			"url": "https://cdnjs.cloudflare.com/ajax/libs/ionic/1.0.0-rc.4/fonts/ionicons.ttf", 
+			"type": "font"
+		},
+		"ionic-css": {
+			"url": "https://cdnjs.cloudflare.com/ajax/libs/ionic/1.0.0-rc.4/css/ionic.min.css", 
+			"type": "css"
+		},
+		"css": {
+			"url": "app.css", 
+			"type": "css"
+		},
+		"ionicCss": {
+			"url": "ionic.css", 
+			"type": "css"
+		},
+		"ionic": {
+			"url": "https://cdnjs.cloudflare.com/ajax/libs/ionic/1.0.0-rc.4/js/ionic.bundle.min.js"
+		},
+		"app": {
+			"url": "app.js", 
+			"type": "script", 
+			"requires": "libs"
+		},
+		"libs": {
+			"url": "libs.js", 
+			"type": "script"
+		}
+
+	}
+}

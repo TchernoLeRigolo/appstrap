@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html appstrap="http://point-to-your-web-server">
+	<head>
+		<meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no, width=device-width">
+		<meta name="apple-mobile-web-app-capable" content="yes">
+		<meta name="mobile-web-app-capable" content="yes">
+
+		<link href="appstrap.css" rel="stylesheet">
+
+		<script>
+			document.addEventListener('appstrapready', function() {
+				angular.bootstrap(document, ['app']);
+			})
+		</script>
+
+		<script src="cordova.js"></script>
+		<script src="appstrap.js"></script>
+	</head>
+
+	<body>
+		<div id="appstrap">
+			<img src="logo.svg">
+			
+			<br/>
+
+			<span id="appstrap-retry" style="display:none">
+				<p>Could not download app, please check your internet connection.</p>
+				<br />
+				<button onClick="window.location.reload()">Retry</button>
+			</span>
+		</div>
+	</body>
+</html>
