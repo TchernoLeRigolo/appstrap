@@ -1,7 +1,7 @@
 var appstrap = (function() {
 	var deviceready = false;
 	var updateService = {};
-
+	var PACKAGE_JSON = 'package.json';
 	
 	document.addEventListener('deviceready', function() {
 		deviceready = true;
@@ -26,7 +26,7 @@ var appstrap = (function() {
 	function removeAsset(filename, success, fail) {
 		if (filename.match('^http*')) filename = filename.split('/').pop();
 		
-		window.resolveLocalFileSystemURL('file:///data/data/com.sidebox.development/files/app.js', function(entry) {
+		window.resolveLocalFileSystemURL(cordova.file.dataDirectory + filename, function(entry) {
 			var r = entry.remove();
 			if (!r) success(); else fail(r);
 		}, function(err) {
@@ -96,12 +96,6 @@ var appstrap = (function() {
 		xmlhttp.send();
 	}
 
-	function createMeta(p) {
-		for(var m in p.meta) {
-			addElement('meta', {name: m, content: p.meta[m]});
-		}
-	}
-
 	function orderDependencies(dependencies) {
 		var assets = [];
 		for (var k in dependencies) assets.push(k);
@@ -146,10 +140,10 @@ var appstrap = (function() {
 	}
 
 	updateService.checkUpdate = function(success, fail) {
-		getFile(this.baseUrl + '/package.json', function(packageResponse) {
+		getFile(this.baseUrl + '/' + PACKAGE_JSON, function(packageResponse) {
 			var remotePack = JSON.parse(packageResponse);
 
-			readFile('package.json', function(pack) {
+			readFile(PACKAGE_JSON, function(pack) {
 				var curPack = JSON.parse(pack);
 
 				if(remotePack.version != curPack.version) {
@@ -172,15 +166,17 @@ var appstrap = (function() {
 
 		//TODO: remove old Assets
 
-		getFile(this.baseUrl + '/package.json', function(packageResponse) {
+		getFile(this.baseUrl + '/' + PACKAGE_JSON, function(packageResponse) {
 			var dependenciesLoaded = 0;
 			var dependenciesToLoad = 1;
 
 			var pack = JSON.parse(packageResponse);
 
-			createMeta(pack);
+			for(var m in pack.meta) {
+				addElement('meta', {name: m, content: pack.meta[m]});
+			}
 
-			resolveAsset('package.json', function(entry) {
+			resolveAsset(PACKAGE_JSON, function(entry) {
 				dependenciesLoaded++;
 
 				for(var d in pack.dependencies) {
@@ -209,15 +205,14 @@ var appstrap = (function() {
 			loadAsset(d, function(entry) {
 				if (dependencies.length === 0) {
 					setTimeout(function() {
-						//angular.element(document).ready(function () {
-					    if (success) success(pack);
+						if (success) success(pack);
+					    
 					    console.log('app ready for boot');
 					    document.dispatchEvent(new Event('appstrapready'))
 
 					    setTimeout(function() {
 					    	if (deviceready) window.dispatchEvent(new Event('deviceready'));
 					    }, 0)
-						//})
 					}, 0);
 				} else {
 					loadOne();
@@ -232,9 +227,10 @@ var appstrap = (function() {
 		updateService.baseUrl = baseUrl;
 			
 		function init() {
-			readFile('package.json', function(pack) {
+			readFile(PACKAGE_JSON, function(pack) {
 				var currentPackage = JSON.parse(pack);
 				updateService.pack = currentPackage;
+				
 				console.log('Appstrap loading', currentPackage);
 				updateService.loadApp(currentPackage);
 			}, function() {
