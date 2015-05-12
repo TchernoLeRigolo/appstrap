@@ -11,6 +11,12 @@
 			document.addEventListener('appstrapready', function() {
 				angular.bootstrap(document, ['app']);
 			})
+
+			document.addEventListener('appstrapfailed', function() {
+				console.log('app download failed, allow for retry');
+				
+				document.getElementById('appstrap-retry').style.display = 'block';
+			})
 		</script>
 
 		<script src="cordova.js"></script>

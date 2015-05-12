@@ -1,13 +1,13 @@
 var appstrap = (function() {
 	var deviceready = false;
+	var updateService = {};
 
+	
 	document.addEventListener('deviceready', function() {
 		deviceready = true;
 	}, false);
 
-	var fileStore = {assetUrl: ''}
-
-	fileStore.read = function(filename, success, fail) {
+	function readFile(filename, success, fail) {
 		window.resolveLocalFileSystemURL(cordova.file.dataDirectory + filename, function(entry) {
 			entry.file(function(file) {
 				var reader = new FileReader();
@@ -23,19 +23,21 @@ var appstrap = (function() {
 		})
 	}
 
-	fileStore.resolveAsset = function(filename, success, fail, forceRefresh) {
-		var assetUrl = this.assetUrl;
+	function resolveAsset(filename, success, fail, forceRefresh) {
+		var assetUrl = updateService.baseUrl + '/' + filename;
+		console.log(assetUrl);
+
 		var fileTransfer = new FileTransfer();
 
 		if (forceRefresh) {
-			fileTransfer.download(assetUrl + '/' + filename, cordova.file.dataDirectory + filename, success, fail)
+			fileTransfer.download(assetUrl, cordova.file.dataDirectory + filename, success, fail)
 		} else {
 			window.resolveLocalFileSystemURL(cordova.file.dataDirectory + filename, 
 				function(entry) {
 					success(entry)
 				},
 				function(err) {
-					fileTransfer.download(assetUrl + '/' + filename, cordova.file.dataDirectory + filename, success, fail)
+					fileTransfer.download(assetUrl, cordova.file.dataDirectory + filename, success, fail)
 				})
 		}
 	}
@@ -75,67 +77,13 @@ var appstrap = (function() {
 		xmlhttp.send();
 	}
 
-	var updateService = {};
-
-	updateService.createMeta = function(p) {
+	function createMeta(p) {
 		for(var m in p.meta) {
 			addElement('meta', {name: m, content: p.meta[m]});
 		}
 	}
 
-	updateService.checkUpdate = function(success, fail) {
-		getFile(this.baseUrl + '/package.json', function(packageResponse) {
-			var remotePack = JSON.parse(packageResponse);
-
-			fileStore.read('package.json', function(pack) {
-				var curPack = JSON.parse(pack);
-
-				if(remotePack.version != curPack.version) {
-					if (success) success(true, remotePack, curPack);
-				} else {
-					if (success) success(false);
-				}
-			}, function(error) {
-				if (success) success(true, remotePack);
-			})
-	    }, function() {
-	    	if (fail) fail();
-	    })
-	}
-
-	updateService.updateApp = function() {
-		var onfail = function(err) {
-			document.getElementById('appstrap-retry').style.display = 'block';
-		}
-
-		getFile(this.baseUrl + '/package.json', function(packageResponse) {
-			var dependenciesLoaded = 0;
-			var dependenciesToLoad = 1;
-
-			var pack = JSON.parse(packageResponse);
-
-			updateService.createMeta(pack);
-
-			fileStore.resolveAsset('package.json', function(entry) {
-				dependenciesLoaded++;
-
-				for(var d in pack.dependencies) {
-					var asset = pack.dependencies[d];
-			    	dependenciesToLoad++;
-
-			    	fileStore.resolveAsset(asset.url, function(entry) {
-						dependenciesLoaded++;
-
-						if(dependenciesLoaded === dependenciesToLoad) {
-			    			window.location.reload();
-			    		}
-					}, onfail, true)
-				}
-			}, onfail, true)
-		}, onfail)
-	}
-
-	updateService.orderDependencies = function(dependencies) {
+	function orderDependencies(dependencies) {
 		var assets = [];
 		for (var k in dependencies) assets.push(k);
 
@@ -162,8 +110,8 @@ var appstrap = (function() {
 		return ret;
 	}
 
-	updateService.loadAsset = function(d, success, fail) {
-		fileStore.resolveAsset(d.url, function(entry) {
+	function loadAsset(d, success, fail) {
+		resolveAsset(d.url, function(entry) {
 			var onload = function() {
 				success(entry);
 			}
@@ -178,28 +126,77 @@ var appstrap = (function() {
 		}, fail)
 	}
 
-	updateService.loadApp = function(currentPackage, success, fail) {
-		document.title = currentPackage.name;
-		var dependencies = updateService.orderDependencies(currentPackage.dependencies);
+	updateService.checkUpdate = function(success, fail) {
+		getFile(this.baseUrl + '/package.json', function(packageResponse) {
+			var remotePack = JSON.parse(packageResponse);
+
+			readFile('package.json', function(pack) {
+				var curPack = JSON.parse(pack);
+
+				if(remotePack.version != curPack.version) {
+					if (success) success(true, remotePack, curPack);
+				} else {
+					if (success) success(false);
+				}
+			}, function(error) {
+				if (success) success(true, remotePack);
+			})
+	    }, function() {
+	    	if (fail) fail();
+	    })
+	}
+
+	updateService.updateApp = function() {
+		var onfail = function(err) {
+			document.dispatchEvent(new Event('appstrapfailed'))
+		}
+
+		getFile(this.baseUrl + '/package.json', function(packageResponse) {
+			var dependenciesLoaded = 0;
+			var dependenciesToLoad = 1;
+
+			var pack = JSON.parse(packageResponse);
+
+			createMeta(pack);
+
+			resolveAsset('package.json', function(entry) {
+				dependenciesLoaded++;
+
+				for(var d in pack.dependencies) {
+					var asset = pack.dependencies[d];
+			    	dependenciesToLoad++;
+
+			    	resolveAsset(asset.url, function(entry) {
+						dependenciesLoaded++;
+
+						if(dependenciesLoaded === dependenciesToLoad) {
+			    			window.location.reload();
+			    		}
+					}, onfail, true)
+				}
+			}, onfail, true)
+		}, onfail)
+	}
+
+	updateService.loadApp = function(pack, success, fail) {
+		document.title = pack.name;
+		var dependencies = orderDependencies(pack.dependencies);
 		
 		var loadOne = function() {
 			var d = dependencies.shift();
 			
-			updateService.loadAsset(d, function(entry) {
+			loadAsset(d, function(entry) {
 				if (dependencies.length === 0) {
 					setTimeout(function() {
-						angular.element(document).ready(function () {
-						    var e = document.getElementById('appstrap');
-						    e.parentNode.removeChild(e);
+						//angular.element(document).ready(function () {
+					    if (success) success(pack);
+					    console.log('app ready for boot');
+					    document.dispatchEvent(new Event('appstrapready'))
 
-						    if (success) success(currentPackage);
-						     
-						    window.dispatchEvent(new Event('appstrapready'))
-
-						    setTimeout(function() {
-						    	if (deviceready) window.dispatchEvent(new Event('deviceready'));
-						    }, 0)
-						})
+					    setTimeout(function() {
+					    	if (deviceready) window.dispatchEvent(new Event('deviceready'));
+					    }, 0)
+						//})
 					}, 0);
 				} else {
 					loadOne();
@@ -210,16 +207,14 @@ var appstrap = (function() {
 		loadOne();
 	}
 
-	updateService.initialize = function(baseUrl) {
-		var self = this;
-		this.baseUrl = baseUrl;
+	function initialize(baseUrl) {
+		updateService.baseUrl = baseUrl;
 			
 		function init() {
-			fileStore.assetUrl = baseUrl;
-
-			fileStore.read('package.json', function(pack) {
+			readFile('package.json', function(pack) {
 				var currentPackage = JSON.parse(pack);
 				updateService.pack = currentPackage;
+				console.log('Appstrap loading', currentPackage);
 				updateService.loadApp(currentPackage);
 			}, function() {
 				updateService.updateApp();
@@ -231,23 +226,13 @@ var appstrap = (function() {
 				console.log('Failed to instantiate file system', err);
 			});
 		}, false)
-
-		return this;
 	}
-
-	var appstrap = {};
-	appstrap.updateService = function(endpoint) {
-		return updateService.initialize(endpoint);
-	}
-
-	appstrap.fileStore = fileStore;
-	appstrap.updateService = updateService;
 
 	var _htmlEndpoint = document.getElementsByTagName('html')[0].getAttribute('appstrap');
 
 	if (_htmlEndpoint) {
-		updateService.initialize(_htmlEndpoint);
+		initialize(_htmlEndpoint);
 	}
 
-	return appstrap;
+	return updateService;
 })();
