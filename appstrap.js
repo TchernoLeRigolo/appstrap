@@ -234,5 +234,9 @@ var appstrap = (function() {
 		initialize(_htmlEndpoint);
 	}
 
+	updateService.initialize = function(endpoint) {
+		initialize(endpoint);
+	}
+
 	return updateService;
 })();
