@@ -128,3 +128,10 @@ module.factory('UpdateService', function() {
 	}
 })
 ```
+
+## TODO
+
+> Handle multiple downloads at once (eg. using 4 download workers...)
+> Handle non-JS-or-CSS files (simple download)
+> Handle progress callback to allow for a download progress bar
+> Other ideas?
