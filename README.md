@@ -11,7 +11,57 @@ Requires cordova File and FileTransfer plugins. To install them in your cordova 
 
 Soon: ```npm install cordova-appstrap```
 
-## Structure of the package.json file
+## The main HTML file
+
+Because the app is hosted for download, the HTML file shipping with your cordova project's application package (APK or IPA) is a simple "App downloading" page. 
+
+A small example of an Angular appstrap page:
+```
+<!DOCTYPE html>
+<html appstrap="http://point-to-your-web-server">
+	<head>
+		<meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no, width=device-width">
+		<meta name="apple-mobile-web-app-capable" content="yes">
+		<meta name="mobile-web-app-capable" content="yes">
+
+		<link href="appstrap.css" rel="stylesheet">
+
+		<script>
+			document.addEventListener('appstrapready', function() {
+				angular.bootstrap(document, ['app']);
+			})
+
+			document.addEventListener('appstrapfailed', function() {
+				console.log('app download failed, allow for retry');
+				
+				document.getElementById('appstrap-retry').style.display = 'block';
+			})
+		</script>
+
+		<script src="cordova.js"></script>
+		<script src="appstrap.js"></script>
+	</head>
+
+	<body>
+		<div id="appstrap">
+			<img src="logo.svg">
+			<p>Downloading application, please wait...</p>
+			<br/>
+
+			<span id="appstrap-retry" style="display:none">
+				<p>Could not download app, please check your internet connection.</p>
+				<br />
+				<button onClick="window.location.reload()">Retry</button>
+			</span>
+		</div>
+	</body>
+</html>
+```
+
+
+## The package.json file
+
+When publishing your files to the remote web server, ensure to increment the version number in the package.json file - this will trigger an application upgrade. It is up to you to do the application upgrade check in your app.
 
 ```
 {
@@ -54,4 +104,22 @@ Soon: ```npm install cordova-appstrap```
       }
   }
 }
+```
+## Checking for an update
+
+An Angular example for an update check service:
+
+```
+module.factory('UpdateService', function() {
+	return function() {
+		window.appstrap.checkUpdate(function(check, pack) {
+			//The remote version number differs from the local one
+			if (check) {
+				if (confirm('A new version is available. Install it?')) {
+					window.appstrap.updateApp();
+				}
+			}
+		})
+	}
+})
 ```
