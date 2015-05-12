@@ -24,7 +24,15 @@ var appstrap = (function() {
 	}
 
 	function resolveAsset(filename, success, fail, forceRefresh) {
-		var assetUrl = updateService.baseUrl + '/' + filename;
+		var assetUrl;
+
+		if (filename.match('^http*')) {
+			assetUrl = filename;
+			filename = filename.split('/').pop();
+		} else {
+			assetUrl = updateService.baseUrl + '/' + filename;
+		}
+		
 		console.log(assetUrl);
 
 		var fileTransfer = new FileTransfer();
