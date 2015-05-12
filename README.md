@@ -110,6 +110,9 @@ When publishing your files to the remote web server, ensure to increment the ver
   }
 }
 ```
+The 'dependencies' list the files which your application requires to run. 'css' types will add a link tag in the head, while the 'script' type will add a script tag.
+
+
 ## Checking for an update
 
 An Angular example for an update check service:
