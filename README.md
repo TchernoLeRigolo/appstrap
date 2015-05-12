@@ -3,15 +3,17 @@ Install and update your hybrid app from a remote web server. No need to publish 
 
 ## Requirements
 
-Requires cordova File and FileTransfer plugins
+Requires cordova File and FileTransfer plugins. To install them in your cordova project type:
+
+```cordova plugins add org.apache.cordova.file-transfer```
 
 ## Install
 
-Soon: npm install cordova-appstrap
+Soon: ```npm install cordova-appstrap```
 
 ## Structure of the package.json file
 
-
+```
 {
   "name": "Application Name",
   "version": "0.0.1",
@@ -52,5 +54,4 @@ Soon: npm install cordova-appstrap
       }
   }
 }
-
-
+```
