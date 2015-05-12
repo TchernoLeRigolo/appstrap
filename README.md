@@ -1,4 +1,4 @@
-# appstrap
+# cordova-appstrap
 Install and update your hybrid app from a remote web server. No need to publish to the App Store or Play Store - just publish your JS & CSS files on a static web server, include a description "package.json" file and you'll be able to install and update your app instantly. This complies with the App & Play store Terms and Conditions. 
 
 ## Requirements
