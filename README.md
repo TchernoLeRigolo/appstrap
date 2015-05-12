@@ -58,6 +58,11 @@ A small example of an Angular appstrap page:
 </html>
 ```
 
+## Initializing appstrap
+
+Appstrap will check for an 'appstrap' attribute on the body tag (see example above) and automatically initialize itself. It is also possible to initialize appstrap manually:
+
+``` appstrap.initialize('http://point-to-your-web-server'); ```
 
 ## The package.json file
 
