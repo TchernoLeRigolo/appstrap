@@ -134,7 +134,9 @@ module.factory('UpdateService', function() {
 
 ## TODO
 
-- Handle multiple downloads at once (eg. using 4 download workers...)
-- Handle non-JS-or-CSS files (simple download)
-- Handle progress callback to allow for a download progress bar
+- URLs in dependencies (http://.../angular.min.js for eg) in order to be able to download from CDNs
+- Multiple downloads at once (eg. using 4 download workers...)
+- Non-JS-or-CSS files for download (images, fonts, ...)
+- Cleanup from 'old' package.json (ie. delete old files)
+- Progress callback to allow for a download progress bar
 - Other ideas?
