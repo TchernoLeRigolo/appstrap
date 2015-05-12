@@ -22,6 +22,17 @@ var appstrap = (function() {
 			fail(err);
 		})
 	}
+	
+	function removeAsset(filename, success, fail) {
+		if (filename.match('^http*')) filename = filename.split('/').pop();
+		
+		window.resolveLocalFileSystemURL('file:///data/data/com.sidebox.development/files/app.js', function(entry) {
+			var r = entry.remove();
+			if (!r) success(); else fail(r);
+		}, function(err) {
+			fail(err);
+		})
+	}
 
 	function resolveAsset(filename, success, fail, forceRefresh) {
 		var assetUrl;
@@ -158,6 +169,8 @@ var appstrap = (function() {
 		var onfail = function(err) {
 			document.dispatchEvent(new Event('appstrapfailed'))
 		}
+
+		//TODO: remove old Assets
 
 		getFile(this.baseUrl + '/package.json', function(packageResponse) {
 			var dependenciesLoaded = 0;

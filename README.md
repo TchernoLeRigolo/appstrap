@@ -134,9 +134,10 @@ module.factory('UpdateService', function() {
 
 ## TODO
 
-- URLs in dependencies (http://.../angular.min.js for eg) in order to be able to download from CDNs
-- Multiple downloads at once (eg. using 4 download workers...)
-- Non-JS-or-CSS files for download (images, fonts, ...)
+- OK : URLs in dependencies (http://.../angular.min.js for eg) in order to be able to download from CDNs
+- OK : Non-JS-or-CSS files for download (images, fonts, ...)
 - Cleanup from 'old' package.json (ie. delete old files)
 - Progress callback to allow for a download progress bar
+- Multiple downloads at once (eg. using 4 download workers...)
+- How to auto-update appstrap itself? --> check Github ? Download appstrap? Use downloaded version instead of initial bundled one?
 - Other ideas?
