@@ -1,12 +1,4 @@
-var appstrap = (function() {
-	var deviceready = false;
-	var updateService = {};
-	var PACKAGE_JSON = 'package.json';
-	
-	document.addEventListener('deviceready', function() {
-		deviceready = true;
-	}, false);
-
+(function() {
 	function readFile(filename, success, fail) {
 		window.resolveLocalFileSystemURL(cordova.file.dataDirectory + filename, function(entry) {
 			entry.file(function(file) {
@@ -22,29 +14,16 @@ var appstrap = (function() {
 			fail(err);
 		})
 	}
-	
-	function removeAsset(filename, success, fail) {
-		if (filename.match('^http*')) filename = filename.split('/').pop();
-		
-		window.resolveLocalFileSystemURL(cordova.file.dataDirectory + filename, function(entry) {
-			var r = entry.remove();
-			if (!r) success(); else fail(r);
-		}, function(err) {
-			fail(err);
-		})
-	}
 
-	function resolveAsset(filename, success, fail, forceRefresh) {
+	function resolveAsset(filename, baseUrl, success, fail, forceRefresh) {
 		var assetUrl;
 
 		if (filename.match('^http*')) {
 			assetUrl = filename;
 			filename = filename.split('/').pop();
 		} else {
-			assetUrl = updateService.baseUrl + '/' + filename;
+			assetUrl = baseUrl + '/' + filename;
 		}
-		
-		console.log(assetUrl);
 
 		var fileTransfer = new FileTransfer();
 
@@ -84,7 +63,7 @@ var appstrap = (function() {
 		
 		xmlhttp.onreadystatechange = function() {
 			if (xmlhttp.readyState == 4) {
-				if (xmlhttp.status == 200 ) {
+				if (xmlhttp.status === 200 ) {
 					if (success) success(xmlhttp.responseText);
 				} else {
 					if (fail) fail();
@@ -94,6 +73,12 @@ var appstrap = (function() {
 
 		xmlhttp.open("GET", url, true);
 		xmlhttp.send();
+	}
+
+	function createMeta(p) {
+		for(var m in p.meta) {
+			addElement('meta', {name: m, content: p.meta[m]});
+		}
 	}
 
 	function orderDependencies(dependencies) {
@@ -123,8 +108,8 @@ var appstrap = (function() {
 		return ret;
 	}
 
-	function loadAsset(d, success, fail) {
-		resolveAsset(d.url, function(entry) {
+	function loadAsset(d, baseUrl, success, fail) {
+		resolveAsset(d.url, baseUrl, function(entry) {
 			var onload = function() {
 				success(entry);
 			}
@@ -139,121 +124,144 @@ var appstrap = (function() {
 		}, fail)
 	}
 
-	updateService.checkUpdate = function(success, fail) {
-		getFile(this.baseUrl + '/' + PACKAGE_JSON, function(packageResponse) {
-			var remotePack = JSON.parse(packageResponse);
+	function load() {
+		if (!window.appstrap) window.appstrap = (function() {
+			var deviceready = false;
+			var updateService = {};
 
-			readFile(PACKAGE_JSON, function(pack) {
-				var curPack = JSON.parse(pack);
+			document.addEventListener('deviceready', function() {
+				deviceready = true;
+			}, false);
 
-				if(remotePack.version != curPack.version) {
-					if (success) success(true, remotePack, curPack);
-				} else {
-					if (success) success(false);
-				}
-			}, function(error) {
-				if (success) success(true, remotePack);
-			})
-	    }, function() {
-	    	if (fail) fail();
-	    })
-	}
+			updateService.checkUpdate = function(success, fail) {
+				getFile(this.baseUrl + '/package.json', function(packageResponse) {
+					var remotePack = JSON.parse(packageResponse);
 
-	updateService.updateApp = function() {
-		var onfail = function(err) {
-			document.dispatchEvent(new Event('appstrapfailed'))
-		}
+					readFile('package.json', function(pack) {
+						var curPack = JSON.parse(pack);
 
-		//TODO: remove old Assets
-
-		getFile(this.baseUrl + '/' + PACKAGE_JSON, function(packageResponse) {
-			var dependenciesLoaded = 0;
-			var dependenciesToLoad = 1;
-
-			var pack = JSON.parse(packageResponse);
-
-			for(var m in pack.meta) {
-				addElement('meta', {name: m, content: pack.meta[m]});
+						if(remotePack.version != curPack.version) {
+							if (success) success(true, remotePack, curPack);
+						} else {
+							if (success) success(false);
+						}
+					}, function(error) {
+						if (success) success(true, remotePack);
+					})
+			    }, function() {
+			    	if (fail) fail();
+			    })
 			}
 
-			resolveAsset(PACKAGE_JSON, function(entry) {
-				dependenciesLoaded++;
+			updateService.updateApp = function() {
+				var onfail = function(err) {
+					console.log('deleting local package.json');
+					window.resolveLocalFileSystemURL(cordova.file.dataDirectory + 'package.json', function(entry) {
+						console.log(entry.remove())
+					}, function(err) {console.log(err)});
 
-				for(var d in pack.dependencies) {
-					var asset = pack.dependencies[d];
-			    	dependenciesToLoad++;
+					document.dispatchEvent(new Event('appstrapfailed'))
+				}
 
-			    	resolveAsset(asset.url, function(entry) {
+				getFile(this.baseUrl + '/package.json', function(packageResponse) {
+					var dependenciesLoaded = 0;
+					var dependenciesToLoad = 1;
+
+					var pack = JSON.parse(packageResponse);
+
+					createMeta(pack);
+
+					resolveAsset('package.json', updateService.baseUrl, function(entry) {
 						dependenciesLoaded++;
 
-						if(dependenciesLoaded === dependenciesToLoad) {
-			    			window.location.reload();
-			    		}
+						for(var d in pack.dependencies) {
+							var asset = pack.dependencies[d];
+					    	dependenciesToLoad++;
+
+					    	resolveAsset(asset.url, function(entry) {
+								dependenciesLoaded++;
+
+								if(dependenciesLoaded === dependenciesToLoad) {
+					    			window.location.reload();
+					    		}
+							}, onfail, true)
+						}
 					}, onfail, true)
-				}
-			}, onfail, true)
-		}, onfail)
-	}
+				}, onfail)
+			}
 
-	updateService.loadApp = function(pack, success, fail) {
-		document.title = pack.name;
-		var dependencies = orderDependencies(pack.dependencies);
-		
-		var loadOne = function() {
-			var d = dependencies.shift();
-			
-			loadAsset(d, function(entry) {
-				if (dependencies.length === 0) {
-					setTimeout(function() {
-						if (success) success(pack);
-					    
-					    console.log('app ready for boot');
-					    document.dispatchEvent(new Event('appstrapready'))
-
-					    setTimeout(function() {
-					    	if (deviceready) window.dispatchEvent(new Event('deviceready'));
-					    }, 0)
-					}, 0);
-				} else {
-					loadOne();
-				}
-			}, fail)
-		}
-
-		loadOne();
-	}
-
-	function initialize(baseUrl) {
-		updateService.baseUrl = baseUrl;
-			
-		function init() {
-			readFile(PACKAGE_JSON, function(pack) {
-				var currentPackage = JSON.parse(pack);
-				updateService.pack = currentPackage;
+			updateService.loadApp = function(pack, success, fail) {
+				document.title = pack.name;
+				var dependencies = orderDependencies(pack.dependencies);
 				
-				console.log('Appstrap loading', currentPackage);
-				updateService.loadApp(currentPackage);
-			}, function() {
-				updateService.updateApp();
-			})
-		}
+				var loadOne = function() {
+					var d = dependencies.shift();
+					
+					loadAsset(d, updateService.baseUrl, function(entry) {
+						if (dependencies.length === 0) {
+							setTimeout(function() {
+								//angular.element(document).ready(function () {
+							    if (success) success(pack);
+							    console.log('app ready for boot');
+							    document.dispatchEvent(new Event('appstrapready'))
 
-		document.addEventListener('deviceready', function() {
-			window.requestFileSystem(LocalFileSystem.PERSISTENT, 0, init, function(err) {
-				console.log('Failed to instantiate file system', err);
-			});
-		}, false)
+							    setTimeout(function() {
+							    	if (deviceready) window.dispatchEvent(new Event('deviceready'));
+							    }, 0)
+								//})
+							}, 0);
+						} else {
+							loadOne();
+						}
+					}, fail)
+				}
+
+				loadOne();
+			}
+
+			function initialize(baseUrl) {
+				updateService.baseUrl = baseUrl;
+					
+				function init() {
+					readFile('package.json', function(pack) {
+						var currentPackage = JSON.parse(pack);
+						updateService.pack = currentPackage;
+						console.log('Appstrap loading', currentPackage);
+						updateService.loadApp(currentPackage);
+					}, function() {
+						updateService.updateApp();
+					})
+				}
+
+				document.addEventListener('deviceready', function() {
+					window.requestFileSystem(LocalFileSystem.PERSISTENT, 0, init, function(err) {
+						console.log('Failed to instantiate file system', err);
+					});
+				}, false)
+			}
+
+			var _htmlEndpoint = document.getElementsByTagName('html')[0].getAttribute('appstrap');
+
+			if (_htmlEndpoint) {
+				initialize(_htmlEndpoint);
+			}
+
+			updateService.initialize = function(endpoint) {
+				initialize(endpoint);
+			}
+
+			return updateService;
+		})();
 	}
 
-	var _htmlEndpoint = document.getElementsByTagName('html')[0].getAttribute('appstrap');
-
-	if (_htmlEndpoint) {
-		initialize(_htmlEndpoint);
-	}
-
-	updateService.initialize = function(endpoint) {
-		initialize(endpoint);
-	}
-
-	return updateService;
+	/*
+	HOWTO update local version of appstrap?
+	document.addEventListener('deviceready', function() {
+		window.resolveLocalFileSystemURL(cordova.file.dataDirectory + 'appstrap.js', function(entry) {
+			//window.appstrap
+		}, function(err) {
+			//could not find downloaded version of appstrap, load local instance (this file)
+		})
+	})*/
+	load();
 })();
