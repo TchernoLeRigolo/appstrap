@@ -24,6 +24,8 @@
 		} else {
 			assetUrl = baseUrl + '/' + filename;
 		}
+		
+		console.log('resolving asset', assetUrl);
 
 		var fileTransfer = new FileTransfer();
 
@@ -63,7 +65,7 @@
 		
 		xmlhttp.onreadystatechange = function() {
 			if (xmlhttp.readyState == 4) {
-				if (xmlhttp.status === 200 ) {
+				if (xmlhttp.status == 200 ) {
 					if (success) success(xmlhttp.responseText);
 				} else {
 					if (fail) fail();
@@ -118,9 +120,15 @@
 				fail();
 			}
 
-			if (d.type === 'css') addElement('link', {rel: 'stylesheet', href: entry.nativeURL}, onload, onerror);
-			if (d.type ==='script') addElement('script', {src: entry.nativeURL, type: 'text/javascript', charset: 'utf-8', async: true}, onload, onerror);
-			
+			if (d.type === 'css') {
+				console.log('Adding CSS head element', entry.nativeURL);
+				addElement('link', {rel: 'stylesheet', href: entry.nativeURL}, onload, onerror);
+			}
+
+			if (d.type ==='script') {
+				console.log('Adding SCRIPT head element', entry.nativeURL);
+				addElement('script', {src: entry.nativeURL, type: 'text/javascript', charset: 'utf-8'}, onload, onerror);
+			}
 		}, fail)
 	}
 
@@ -168,17 +176,17 @@
 					var dependenciesToLoad = 1;
 
 					var pack = JSON.parse(packageResponse);
-
+					console.log('remote package found', pack);
 					createMeta(pack);
 
 					resolveAsset('package.json', updateService.baseUrl, function(entry) {
 						dependenciesLoaded++;
 
-						for(var d in pack.dependencies) {
+						for (var d in pack.dependencies) {
 							var asset = pack.dependencies[d];
 					    	dependenciesToLoad++;
 
-					    	resolveAsset(asset.url, function(entry) {
+					    	resolveAsset(asset.url, updateService.baseUrl, function(entry) {
 								dependenciesLoaded++;
 
 								if(dependenciesLoaded === dependenciesToLoad) {
@@ -229,6 +237,7 @@
 						console.log('Appstrap loading', currentPackage);
 						updateService.loadApp(currentPackage);
 					}, function() {
+						console.log('Appstrap loading: no current package. Updating app...')
 						updateService.updateApp();
 					})
 				}

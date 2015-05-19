@@ -136,6 +136,7 @@ module.factory('UpdateService', function() {
 
 - OK : URLs in dependencies (http://.../angular.min.js for eg) in order to be able to download from CDNs
 - OK : Non-JS-or-CSS files for download (images, fonts, ...)
+- Detect remote changes so as to reduce downloads required
 - Cleanup from 'old' package.json (ie. delete old files)
 - Progress callback to allow for a download progress bar
 - Multiple downloads at once (eg. using 4 download workers...)
