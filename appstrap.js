@@ -83,6 +83,7 @@
 		}
 	}
 
+	/* Orders dependencies according to the sequence provided in package.json */
 	function orderDependencies(dependencies) {
 		var assets = [];
 		for (var k in dependencies) assets.push(k);
@@ -110,6 +111,7 @@
 		return ret;
 	}
 
+	/* Gets the local asset file and adds corresponding HTML head CSS or SCRIPT element */
 	function loadAsset(d, baseUrl, success, fail) {
 		resolveAsset(d.url, baseUrl, function(entry) {
 			var onload = function() {
@@ -132,145 +134,133 @@
 		}, fail)
 	}
 
-	function load() {
-		if (!window.appstrap) window.appstrap = (function() {
-			var deviceready = false;
-			var updateService = {};
+	var deviceready = false;
+	
+	//check for device ready as it could already have been fired before all assets are available
+	document.addEventListener('deviceready', function() {
+		deviceready = true;
+	}, false);
 
-			document.addEventListener('deviceready', function() {
-				deviceready = true;
-			}, false);
+	//
+	var updateService = {};
 
-			updateService.checkUpdate = function(success, fail) {
-				getFile(this.baseUrl + '/package.json', function(packageResponse) {
-					var remotePack = JSON.parse(packageResponse);
+	/* Checks the remote location's package.json file for a new version. */
+	updateService.checkUpdate = function(success, fail) {
+		getFile(this.baseUrl + '/package.json', function(packageResponse) {
+			var remotePack = JSON.parse(packageResponse);
 
-					readFile('package.json', function(pack) {
-						var curPack = JSON.parse(pack);
+			readFile('package.json', function(pack) {
+				var curPack = JSON.parse(pack);
 
-						if(remotePack.version != curPack.version) {
-							if (success) success(true, remotePack, curPack);
-						} else {
-							if (success) success(false);
-						}
-					}, function(error) {
-						if (success) success(true, remotePack);
-					})
-			    }, function() {
-			    	if (fail) fail();
-			    })
-			}
-
-			updateService.updateApp = function() {
-				var onfail = function(err) {
-					console.log('deleting local package.json');
-					window.resolveLocalFileSystemURL(cordova.file.dataDirectory + 'package.json', function(entry) {
-						console.log(entry.remove())
-					}, function(err) {console.log(err)});
-
-					document.dispatchEvent(new Event('appstrapfailed'))
+				if(remotePack.version != curPack.version) {
+					if (success) success(true, remotePack, curPack);
+				} else {
+					if (success) success(false);
 				}
-
-				getFile(this.baseUrl + '/package.json', function(packageResponse) {
-					var dependenciesLoaded = 0;
-					var dependenciesToLoad = 1;
-
-					var pack = JSON.parse(packageResponse);
-					console.log('remote package found', pack);
-					createMeta(pack);
-
-					resolveAsset('package.json', updateService.baseUrl, function(entry) {
-						dependenciesLoaded++;
-
-						for (var d in pack.dependencies) {
-							var asset = pack.dependencies[d];
-					    	dependenciesToLoad++;
-
-					    	resolveAsset(asset.url, updateService.baseUrl, function(entry) {
-								dependenciesLoaded++;
-
-								if(dependenciesLoaded === dependenciesToLoad) {
-					    			window.location.reload();
-					    		}
-							}, onfail, true)
-						}
-					}, onfail, true)
-				}, onfail)
-			}
-
-			updateService.loadApp = function(pack, success, fail) {
-				document.title = pack.name;
-				var dependencies = orderDependencies(pack.dependencies);
-				
-				var loadOne = function() {
-					var d = dependencies.shift();
-					
-					loadAsset(d, updateService.baseUrl, function(entry) {
-						if (dependencies.length === 0) {
-							setTimeout(function() {
-								//angular.element(document).ready(function () {
-							    if (success) success(pack);
-							    console.log('app ready for boot');
-							    document.dispatchEvent(new Event('appstrapready'))
-
-							    setTimeout(function() {
-							    	if (deviceready) window.dispatchEvent(new Event('deviceready'));
-							    }, 0)
-								//})
-							}, 0);
-						} else {
-							loadOne();
-						}
-					}, fail)
-				}
-
-				loadOne();
-			}
-
-			function initialize(baseUrl) {
-				updateService.baseUrl = baseUrl;
-					
-				function init() {
-					readFile('package.json', function(pack) {
-						var currentPackage = JSON.parse(pack);
-						updateService.pack = currentPackage;
-						console.log('Appstrap loading', currentPackage);
-						updateService.loadApp(currentPackage);
-					}, function() {
-						console.log('Appstrap loading: no current package. Updating app...')
-						updateService.updateApp();
-					})
-				}
-
-				document.addEventListener('deviceready', function() {
-					window.requestFileSystem(LocalFileSystem.PERSISTENT, 0, init, function(err) {
-						console.log('Failed to instantiate file system', err);
-					});
-				}, false)
-			}
-
-			var _htmlEndpoint = document.getElementsByTagName('html')[0].getAttribute('appstrap');
-
-			if (_htmlEndpoint) {
-				initialize(_htmlEndpoint);
-			}
-
-			updateService.initialize = function(endpoint) {
-				initialize(endpoint);
-			}
-
-			return updateService;
-		})();
+			}, function(error) {
+				if (success) success(true, remotePack);
+			})
+	    }, function() {
+	    	if (fail) fail();
+	    })
 	}
 
-	/*
-	HOWTO update local version of appstrap?
-	document.addEventListener('deviceready', function() {
-		window.resolveLocalFileSystemURL(cordova.file.dataDirectory + 'appstrap.js', function(entry) {
-			//window.appstrap
-		}, function(err) {
-			//could not find downloaded version of appstrap, load local instance (this file)
-		})
-	})*/
-	load();
+	/* Force an update of the application. Downloads all assets and triggers a window reload. */
+	updateService.updateApp = function() {
+		var onfail = function(err) {
+			console.log('deleting local package.json');
+			window.resolveLocalFileSystemURL(cordova.file.dataDirectory + 'package.json', function(entry) {
+				console.log(entry.remove())
+			}, function(err) {console.log(err)});
+
+			document.dispatchEvent(new Event('appstrapfailed'))
+		}
+
+		getFile(this.baseUrl + '/package.json', function(packageResponse) {
+			var dependenciesLoaded = 0;
+			var dependenciesToLoad = 1;
+
+			var pack = JSON.parse(packageResponse);
+			console.log('remote package found', pack);
+			createMeta(pack);
+
+			resolveAsset('package.json', updateService.baseUrl, function(entry) {
+				dependenciesLoaded++;
+
+				for (var d in pack.dependencies) {
+					var asset = pack.dependencies[d];
+			    	dependenciesToLoad++;
+
+			    	resolveAsset(asset.url, updateService.baseUrl, function(entry) {
+						dependenciesLoaded++;
+
+						if(dependenciesLoaded === dependenciesToLoad) {
+			    			window.location.reload();
+			    		}
+					}, onfail, true)
+				}
+			}, onfail, true)
+		}, onfail)
+	}
+
+	/* Loads the application. Orders dependencies according to the package json file and add head CSS & SCRIPT elements accordingly. */
+	updateService.loadApp = function(pack, success, fail) {
+		document.title = pack.name;
+		var dependencies = orderDependencies(pack.dependencies);
+		
+		var loadOne = function() {
+			var d = dependencies.shift();
+			
+			loadAsset(d, updateService.baseUrl, function(entry) {
+				if (dependencies.length === 0) {
+					setTimeout(function() {
+						//angular.element(document).ready(function () {
+					    if (success) success(pack);
+					    console.log('app ready for boot');
+					    document.dispatchEvent(new Event('appstrapready'))
+
+					    setTimeout(function() {
+					    	if (deviceready) window.dispatchEvent(new Event('deviceready'));
+					    }, 0)
+						//})
+					}, 0);
+				} else {
+					loadOne();
+				}
+			}, fail)
+		}
+
+		loadOne();
+	}
+
+	/* Initializes the application. Reads the local package.json and loads app. If none exists, the force update the app. */
+	updateService.initialize = function(baseUrl) {
+		updateService.baseUrl = baseUrl;
+			
+		function init() {
+			readFile('package.json', function(pack) {
+				var currentPackage = JSON.parse(pack);
+				updateService.pack = currentPackage;
+				console.log('Appstrap loading', currentPackage);
+				updateService.loadApp(currentPackage);
+			}, function() {
+				console.log('Appstrap loading: no current package. Updating app...')
+				updateService.updateApp();
+			})
+		}
+
+		document.addEventListener('deviceready', function() {
+			window.requestFileSystem(LocalFileSystem.PERSISTENT, 0, init, function(err) {
+				console.log('Failed to instantiate file system', err);
+			});
+		}, false)
+	}
+
+	var _htmlEndpoint = document.getElementsByTagName('html')[0].getAttribute('appstrap');
+
+	if (_htmlEndpoint) {
+		updateService.initialize(_htmlEndpoint);
+	}
+
+	window.appstrap = updateService;
 })();
