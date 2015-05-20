@@ -73,7 +73,7 @@
 			}
 		}
 
-		xmlhttp.open("GET", url, true);
+		xmlhttp.open("GET", url+'?'+new Date(), true);
 		xmlhttp.send();
 	}
 
