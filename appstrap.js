@@ -42,6 +42,16 @@
 		}
 	}
 
+	function removeAsset(filename) {
+		window.resolveLocalFileSystemURL(cordova.file.dataDirectory + filename, 
+			function(entry) {
+				console.log(entry.remove())
+			}, 
+			function(err) {
+				console.log(err)
+			})
+	}
+
 	function addElement(tag, attrs, onload, onerror) {
 		var e = document.createElement(tag);
 		if (attrs) for (var k in attrs) e.setAttribute(k, attrs[k]);
@@ -168,38 +178,34 @@
 	/* Force an update of the application. Downloads all assets and triggers a window reload. */
 	updateService.updateApp = function() {
 		var onfail = function(err) {
-			console.log('deleting local package.json');
-			window.resolveLocalFileSystemURL(cordova.file.dataDirectory + 'package.json', function(entry) {
-				console.log(entry.remove())
-			}, function(err) {console.log(err)});
-
 			document.dispatchEvent(new Event('appstrapfailed'))
 		}
 
+		console.log('deleting local package.json');
+		removeAsset('package.json');
 		getFile(this.baseUrl + '/package.json', function(packageResponse) {
 			var dependenciesLoaded = 0;
-			var dependenciesToLoad = 1;
+			var dependenciesToLoad = 0;
 
 			var pack = JSON.parse(packageResponse);
 			console.log('remote package found', pack);
 			createMeta(pack);
 
-			resolveAsset('package.json', updateService.baseUrl, function(entry) {
-				dependenciesLoaded++;
+			for (var d in pack.dependencies) {
+				var asset = pack.dependencies[d];
+		    	dependenciesToLoad++;
 
-				for (var d in pack.dependencies) {
-					var asset = pack.dependencies[d];
-			    	dependenciesToLoad++;
+		    	resolveAsset(asset.url, updateService.baseUrl, function() {
+					dependenciesLoaded++;
 
-			    	resolveAsset(asset.url, updateService.baseUrl, function(entry) {
-						dependenciesLoaded++;
-
-						if(dependenciesLoaded === dependenciesToLoad) {
-			    			window.location.reload();
-			    		}
-					}, onfail, true)
-				}
-			}, onfail, true)
+					if(dependenciesLoaded === dependenciesToLoad) {
+						resolveAsset('package.json', updateService.baseUrl, function() {
+							window.location.reload();
+						}, onfail, true)
+		    		}
+				}, onfail, true)
+			}
+			
 		}, onfail)
 	}
 
