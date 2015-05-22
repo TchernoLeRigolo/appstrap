@@ -19,17 +19,19 @@
 		var assetUrl;
 
 		if (filename.match('^http*')) {
-			assetUrl = filename;
+			assetUrl = filename + '?' + new Date().getTime();
 			filename = filename.split('/').pop();
 		} else {
-			assetUrl = baseUrl + '/' + filename;
+			assetUrl = baseUrl + '/' + filename + '?' + new Date().getTime();
 		}
 		
 		console.log('resolving asset', assetUrl);
+		console.log('force = '+forceRefresh);
 
 		var fileTransfer = new FileTransfer();
 
 		if (forceRefresh) {
+			console.log('force refresh of '+filename)
 			fileTransfer.download(assetUrl, cordova.file.dataDirectory + filename, success, fail)
 		} else {
 			window.resolveLocalFileSystemURL(cordova.file.dataDirectory + filename, 
@@ -134,12 +136,12 @@
 
 			if (d.type === 'css') {
 				console.log('Adding CSS head element', entry.nativeURL);
-				addElement('link', {rel: 'stylesheet', href: entry.nativeURL}, onload, onerror);
+				addElement('link', {rel: 'stylesheet', href: entry.nativeURL + '?' + new Date().getTime()}, onload, onerror);
 			}
 
 			if (d.type ==='script') {
 				console.log('Adding SCRIPT head element', entry.nativeURL);
-				addElement('script', {src: entry.nativeURL, type: 'text/javascript', charset: 'utf-8'}, onload, onerror);
+				addElement('script', {src: entry.nativeURL + '?' + new Date().getTime(), type: 'text/javascript', charset: 'utf-8'}, onload, onerror);
 			}
 		}, fail)
 	}
@@ -177,6 +179,7 @@
 
 	/* Force an update of the application. Downloads all assets and triggers a window reload. */
 	updateService.updateApp = function() {
+		console.log('UPDATE APP');
 		var onfail = function(err) {
 			document.dispatchEvent(new Event('appstrapfailed'))
 		}
@@ -195,10 +198,13 @@
 				var asset = pack.dependencies[d];
 		    	dependenciesToLoad++;
 
-		    	resolveAsset(asset.url, updateService.baseUrl, function() {
-					dependenciesLoaded++;
+		    	resolveAsset(asset.url, updateService.baseUrl, function(entry) {
+		    		console.log('successfully downloaded '+ entry.nativeURL);
 
+					dependenciesLoaded++;
+					console.log('dependenciesLoaded', dependenciesLoaded, 'dependenciesToLoad', dependenciesToLoad)
 					if(dependenciesLoaded === dependenciesToLoad) {
+
 						resolveAsset('package.json', updateService.baseUrl, function() {
 							window.location.reload();
 						}, onfail, true)
@@ -211,6 +217,7 @@
 
 	/* Loads the application. Orders dependencies according to the package json file and add head CSS & SCRIPT elements accordingly. */
 	updateService.loadApp = function(pack, success, fail) {
+		console.log('LOAP APP');
 		document.title = pack.name;
 		var dependencies = orderDependencies(pack.dependencies);
 		
