@@ -158,7 +158,7 @@
 
 	/* Checks the remote location's package.json file for a new version. */
 	updateService.checkUpdate = function(success, fail) {
-		getFile(this.baseUrl + '/package.json', function(packageResponse) {
+		getFile(this.baseUrl + '/package.json?time='+new Date(), function(packageResponse) {
 			var remotePack = JSON.parse(packageResponse);
 
 			readFile('package.json', function(pack) {
@@ -186,7 +186,7 @@
 
 		console.log('deleting local package.json');
 		removeAsset('package.json');
-		getFile(this.baseUrl + '/package.json', function(packageResponse) {
+		getFile(this.baseUrl + '/package.json?time='+new Date(), function(packageResponse) {
 			var dependenciesLoaded = 0;
 			var dependenciesToLoad = 0;
 
