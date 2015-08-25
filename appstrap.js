@@ -1,4 +1,6 @@
 (function() {
+	console.log('Initializing appstrap');
+	
 	function readFile(filename, success, fail) {
 		window.resolveLocalFileSystemURL(cordova.file.dataDirectory + filename, function(entry) {
 			entry.file(function(file) {
